@@ -1,0 +1,51 @@
+models:
+  - "gemma2:27b"
+  - "llama3.1:8b"
+  - "phi3.5:3.8b"
+  - "phi4:14b"
+  - "qwen2:7b"
+
+temperature: 0.0
+num_predict: 200
+repeat_penalty: 1.0
+
+instruction_prompt: |
+  You are a parser for Earth-observation satellite tasking requests.
+  Read the request below and extract four labels:
+    - day: the day of the delivery deadline, relative to today.
+      Allowed values: {day_values}
+    - hour: the part of the day of the delivery deadline.
+      Allowed values: {hour_values}
+    - sensor: the sensor needed to observe the requested phenomenon.
+      Allowed values: {sensor_values}
+    - priority: the importance level of the request.
+      Allowed values: {priority_values}
+  Each label must be exactly one of its allowed values.
+  Return ONLY a JSON object with the keys "day", "hour", "sensor" and "priority".
+
+  Request:
+  {request_text}
+
+vocabularies:
+  sensor:
+    - "TIR"
+    - "VNIR"
+    - "SAR"
+    - "NIR"
+    - "VISUAL"
+  priority:
+    - "low priority background survey filler task flexible schedule"
+    - "medium priority standard operational tasking routine monitoring monitoring"
+    - "high priority absolute institutional priority binding contract requirement urgent execution mandatory"
+  day:
+    - "today"
+    - "tomorrow"
+    - "the day after tomorrow"
+    - "in three days"
+    - "in four days"
+  hour:
+    - "morning"
+    - "mid-day"
+    - "afternoon"
+    - "evening"
+    - "overnight"
