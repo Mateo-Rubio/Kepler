@@ -18,7 +18,7 @@ def build_format_schema(vocabularies: Dict[str, List[str]]) -> Dict[str, Any]:
         "properties": {
             "day": {"type": "string", "enum": vocabularies["day"]},
             "hour": {"type": "string", "enum": vocabularies["hour"]},
-            "sensor": {"type": "string", "enum": vocabularies["sensor"]},
+            "sensor": {"type": "string", "enum": list(vocabularies["sensor"])},
             "priority": {"type": "string", "enum": vocabularies["priority"]},
         },
         "required": ["day", "hour", "sensor", "priority"],

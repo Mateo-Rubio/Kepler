@@ -17,7 +17,7 @@ instruction_prompt: |
     - hour: the part of the day of the delivery deadline.
       Allowed values: {hour_values}
     - sensor: the sensor needed to observe the requested phenomenon.
-      Allowed values: {sensor_values}
+      Allowed values (keys), each with the observation it performs: {sensor_values}
     - priority: the importance level of the request.
       Allowed values: {priority_values}
   Each label must be exactly one of its allowed values.
@@ -28,11 +28,11 @@ instruction_prompt: |
 
 vocabularies:
   sensor:
-    - "TIR"
-    - "VNIR"
-    - "SAR"
-    - "NIR"
-    - "VISUAL"
+    TIR: "thermal mapping heat signature surface temperature profile thermal anomaly detection"
+    VNIR: "multispectral vegetation analysis chlorophyll absorption level NDVI index"
+    SAR: "active radar scan microwave surface imaging cloud-penetrating capture"
+    NIR: "near-infrared reflection water body boundary mapping soil moisture assessment"
+    VISUAL: "high-resolution optical snapshot daylight photography RGB true-color imagery"
   priority:
     - "low priority background survey filler task flexible schedule"
     - "medium priority standard operational tasking routine monitoring monitoring"
