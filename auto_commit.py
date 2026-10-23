@@ -13,9 +13,10 @@ CARPETA = "maquina_a"  # datos que se parsean (población del muestreo)
 MAQUINA = f"maquina_{input('Letra de esta máquina (escribe solo la letra, ej. a): ').strip().lower()}"
 
 token = getpass.getpass("Token de GitHub (no se muestra al escribir): ").strip()
-subprocess.run(["powershell", "-NoProfile", "-Command",
-                "[Windows.ApplicationModel.DataTransfer.Clipboard, Windows.ApplicationModel.DataTransfer, ContentType=WindowsRuntime] | Out-Null; "
-                "[Windows.ApplicationModel.DataTransfer.Clipboard]::ClearHistory() | Out-Null"])
+if os.name == "nt":
+    subprocess.run(["powershell", "-NoProfile", "-Command",
+                    "[Windows.ApplicationModel.DataTransfer.Clipboard, Windows.ApplicationModel.DataTransfer, ContentType=WindowsRuntime] | Out-Null; "
+                    "[Windows.ApplicationModel.DataTransfer.Clipboard]::ClearHistory() | Out-Null"])
 cred = base64.b64encode(f"x-access-token:{token}".encode()).decode()
 GIT_ENV = {**os.environ, "GIT_CONFIG_COUNT": "2",
            "GIT_CONFIG_KEY_0": "credential.helper", "GIT_CONFIG_VALUE_0": "",
