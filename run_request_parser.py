@@ -1,12 +1,23 @@
 import argparse
 import json
+import os
 import pathlib
 import random
+import requests
 import yaml
 from request_parser.main import request_parser_main
 
 FIELDS = ["day", "hour", "sensor", "priority"]
 N_SCENARIOS = 34
+
+
+def check_ollama_models_available(models: list):
+    base_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+    installed = {m["name"] for m in requests.get(f"{base_url}/api/tags", timeout=10).json()["models"]}
+    installed |= {name[:-len(":latest")] for name in installed if name.endswith(":latest")}
+    missing = [m for m in models if m not in installed]
+    if missing:
+        raise ConnectionError(f"Models not installed in Ollama: {missing}")
 
 
 def sampled_scenarios(n: int, seed: int) -> list:
@@ -70,6 +81,7 @@ def main():
     cfg = load_config("config.yaml")
     models = ([m.strip() for m in args.models.split(",") if m.strip()]
               if args.models else cfg["models"])
+    check_ollama_models_available(models)
     sample = sampled_scenarios(args.n, args.seed)
     reps = args.reps.split(",") if args.reps else None
     print(f"  Sampled scenarios (in order): {sample}")
