@@ -7,7 +7,8 @@ from scipy import stats
 from run_request_parser import (load_config, clean_model_name, parse_scenario,
                                 sampled_scenarios, N_SCENARIOS)
 
-ROOT = pathlib.Path(sys.argv[1])  # carpeta maquina_a de KeplerDF-Datos
+ROOT = pathlib.Path(sys.argv[1])  # carpeta maquina_a de KeplerDF-Datos (lectura)
+OUT = pathlib.Path(sys.argv[2])  # carpeta maquina_a de Kepler-Parsed-Requests (escritura)
 SEED = 2026
 REPS = ["rep_1", "rep_2"]
 E = 0.05
@@ -26,11 +27,16 @@ def sample_paths(sample):
             if int(p.parent.name.split("_")[1]) in sample and p.parent.parent.name in REPS]
 
 
+def parsed_path(path, model):
+    return OUT / path.parent.relative_to(ROOT) / f"parsed_requests_{clean_model_name(model)}.json"
+
+
 def parse_sample(sample):
     for path in sample_paths(sample):
         for model in PARSERS:
-            out = path.parent / f"parsed_requests_{clean_model_name(model)}.json"
+            out = parsed_path(path, model)
             if not out.exists():
+                out.parent.mkdir(parents=True, exist_ok=True)
                 print(f"  [RUN] {path.parent} | parser={model}")
                 out.write_text(json.dumps(parse_scenario(path, model, cfg, cache), indent=2,
                                           ensure_ascii=False), encoding="utf-8")
@@ -48,8 +54,7 @@ def load_rows(sample):
             hits = sum(t["validation"][f"{c}_match"] and not f for t, f in zip(tasks, fuga))
             rows.append({**base, "validador": "kdf", "categoria": c, "aciertos": hits, "total": len(tasks)})
         for model in PARSERS:
-            parsed = json.loads((path.parent / f"parsed_requests_{clean_model_name(model)}.json")
-                                .read_text(encoding="utf-8"))
+            parsed = json.loads(parsed_path(path, model).read_text(encoding="utf-8"))
             for c in CATEGORIES:
                 hits = sum(p["parser_match"][f"{c}_match"] and not f for p, f in zip(parsed, fuga))
                 rows.append({**base, "validador": model, "categoria": c, "aciertos": hits, "total": len(parsed)})
@@ -88,8 +93,8 @@ while True:
         break
     n = n_req
 
-detalle.to_csv(ROOT / "muestreo_detalle.csv", index=False)
-(ROOT / "muestreo.json").write_text(json.dumps({
+detalle.to_csv(OUT / "muestreo_detalle.csv", index=False)
+(OUT / "muestreo.json").write_text(json.dumps({
     "seed": SEED, "reps": REPS, "E": E, "categorias": CATEGORIES, "parsers": PARSERS,
     "n": n, "escenarios": sample,
 }, indent=2, ensure_ascii=False), encoding="utf-8")
