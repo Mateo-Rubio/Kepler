@@ -1,10 +1,16 @@
 import argparse
 import json
 import pathlib
+import random
 import yaml
 from request_parser.main import request_parser_main
 
 FIELDS = ["day", "hour", "sensor", "priority"]
+N_SCENARIOS = 34
+
+
+def sampled_scenarios(n: int, seed: int) -> list:
+    return random.Random(seed).sample(range(1, N_SCENARIOS + 1), N_SCENARIOS)[:n]
 
 
 def load_config(config_path: str) -> dict:
@@ -16,13 +22,16 @@ def clean_model_name(model: str) -> str:
     return model.replace(":", "_").replace(".", "_")
 
 
-def parse_scenario(combined_path: pathlib.Path, model: str, cfg: dict) -> list:
+def parse_scenario(combined_path: pathlib.Path, model: str, cfg: dict, cache: dict) -> list:
     with combined_path.open("r", encoding="utf-8") as f:
         combined = json.load(f)
 
     results = []
     for task in combined["tasks"]:
-        parsed = request_parser_main(task["generated_output"], model, cfg)
+        key = (model, task["generated_output"])
+        if key not in cache:
+            cache[key] = request_parser_main(task["generated_output"], model, cfg)
+        parsed = cache[key]
         ground_truth = task["ground_truth"]
         validation = task["validation"]
         results.append({
@@ -50,14 +59,28 @@ def main():
     parser.add_argument("--models", type=str, default=None,
                         help="Comma-separated parser models (e.g. 'llama3.1:8b,phi4:14b'). "
                              "Default: the models in config.yaml.")
+    parser.add_argument("--n", type=int, default=N_SCENARIOS,
+                        help="Number of scenarios to sample (prefix of a seeded permutation of 1..34).")
+    parser.add_argument("--seed", type=int, default=2026,
+                        help="Seed of the scenario permutation. Keep it fixed when increasing --n.")
+    parser.add_argument("--reps", type=str, default=None,
+                        help="Comma-separated reps to include (e.g. 'rep_1,rep_2'). Default: all.")
     args = parser.parse_args()
 
     cfg = load_config("config.yaml")
     models = ([m.strip() for m in args.models.split(",") if m.strip()]
               if args.models else cfg["models"])
-    combined_paths = sorted(pathlib.Path(args.root_dir).glob(
-        "*/*/temp_*/rep_*/scenario_*/ollama_prompts_combined.json"
-    ))
+    sample = sampled_scenarios(args.n, args.seed)
+    reps = args.reps.split(",") if args.reps else None
+    print(f"  Sampled scenarios (in order): {sample}")
+    combined_paths = [
+        p for p in sorted(pathlib.Path(args.root_dir).glob(
+            "*/*/temp_*/rep_*/scenario_*/ollama_prompts_combined.json"
+        ))
+        if int(p.parent.name.split("_")[1]) in sample
+        and (reps is None or p.parent.parent.name in reps)
+    ]
+    cache = {}
     total_run = total_skipped = 0
 
     for combined_path in combined_paths:
@@ -71,7 +94,7 @@ def main():
 
             total_run += 1
             print(f"  [RUN] {scenario_dir} | parser={model}...")
-            results = parse_scenario(combined_path, model, cfg)
+            results = parse_scenario(combined_path, model, cfg, cache)
             output_path.write_text(
                 json.dumps(results, indent=2, ensure_ascii=False),
                 encoding="utf-8"
