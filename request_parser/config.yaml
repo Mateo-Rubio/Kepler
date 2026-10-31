@@ -1,9 +1,4 @@
-models:
-  - "gemma2:27b"
-  - "llama3.1:8b"
-  - "phi3.5:3.8b"
-  - "phi4:14b"
-  - "qwen2:7b"
+model: "phi3.5:3.8b"
 
 temperature: 0.0
 num_predict: 200
