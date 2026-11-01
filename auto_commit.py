@@ -8,16 +8,11 @@ import sys
 import time
 
 INTERVALO_S = 300
-DATOS = pathlib.Path("../KeplerDF-Datos")  # lectura
 SALIDA = pathlib.Path("../Kepler-Parsed-Requests")  # escritura y publicación
-CARPETA = "maquina_a"  # datos que se parsean (población del muestreo)
+SCRIPTS = ["evaluar_muestra.py", "evaluar_todo.py"]  # primero la muestra, luego todo
 MAQUINA = f"maquina_{input('Letra de esta máquina (escribe solo la letra, ej. a): ').strip().lower()}"
 
 token = getpass.getpass("Token de GitHub (no se muestra al escribir): ").strip()
-if os.name == "nt":
-    subprocess.run(["powershell", "-NoProfile", "-Command",
-                    "[Windows.ApplicationModel.DataTransfer.Clipboard, Windows.ApplicationModel.DataTransfer, ContentType=WindowsRuntime] | Out-Null; "
-                    "[Windows.ApplicationModel.DataTransfer.Clipboard]::ClearHistory() | Out-Null"])
 cred = base64.b64encode(f"x-access-token:{token}".encode()).decode()
 GIT_ENV = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_CONFIG_COUNT": "2",
            "GIT_CONFIG_KEY_0": "credential.helper", "GIT_CONFIG_VALUE_0": "",
@@ -28,7 +23,7 @@ if subprocess.run(["git", "ls-remote", "origin"], cwd=SALIDA, env=GIT_ENV, captu
 
 
 def publicar():
-    subprocess.run(["git", "add", CARPETA], cwd=SALIDA)
+    subprocess.run(["git", "add", "-A"], cwd=SALIDA)
     nuevos = subprocess.run(["git", "diff", "--cached", "--name-only"], cwd=SALIDA,
                             capture_output=True, text=True).stdout.split()
     if nuevos:
@@ -41,12 +36,12 @@ def publicar():
         time.sleep(random.uniform(1, 10))
 
 
-with open("muestreo_ic.log", "a", encoding="utf-8") as log:
-    proc = subprocess.Popen([sys.executable, "-u", "muestreo_ic.py", str(DATOS / CARPETA), str(SALIDA / CARPETA)],
-                            stdout=log, stderr=subprocess.STDOUT)
-    while True:
-        terminado = proc.poll() is not None
-        publicar()
-        if terminado:
-            break
-        time.sleep(INTERVALO_S + random.uniform(0, 120))
+with open("evaluacion.log", "a", encoding="utf-8") as log:
+    for script in SCRIPTS:
+        proc = subprocess.Popen([sys.executable, "-u", script], stdout=log, stderr=subprocess.STDOUT)
+        while True:
+            terminado = proc.poll() is not None
+            publicar()
+            if terminado:
+                break
+            time.sleep(INTERVALO_S + random.uniform(0, 120))
